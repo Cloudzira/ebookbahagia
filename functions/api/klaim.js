@@ -14,15 +14,15 @@ export async function onRequestPost({ request, env }) {
     if (!orders.length) return out({ error: 'notfound' }, 404);
 
     let revoked = false; // pesanan yang sudah punya kode: kirim kode yang sama, kecuali sudah dicabut di admin
-    for (const o of orders) if (o.data.code) { if (await getDoc(env, 'licenses', o.data.code)) return out({ code: o.data.code }); revoked = true; }
+    for (const o of orders) if (o.data.code) { if (await getDoc(env, 'bts_licenses', o.data.code)) return out({ code: o.data.code }); revoked = true; }
 
     const o = orders.find((x) => !x.data.code); // pesanan lunas yang belum pernah diklaim
     if (!o) return out({ error: revoked ? 'revoked' : 'notfound' }, revoked ? 410 : 404);
     const code = gen();
-    await createDoc(env, 'licenses', code, { max: +env.MAX_DEVICES || 3, uids: [], note: 'lynk ' + (o.data.trx || o.id), createdAt: new Date() });
-    if (!(await patchDoc(env, 'orders', o.id, { code, claimedAt: new Date() }, o.updateTime))) { // klaim bersamaan: pakai kode pemenang
-      await delDoc(env, 'licenses', code);
-      const o2 = await getDoc(env, 'orders', o.id);
+    await createDoc(env, 'bts_licenses', code, { max: +env.MAX_DEVICES || 3, uids: [], note: 'lynk ' + (o.data.trx || o.id), createdAt: new Date() });
+    if (!(await patchDoc(env, 'bts_orders', o.id, { code, claimedAt: new Date() }, o.updateTime))) { // klaim bersamaan: pakai kode pemenang
+      await delDoc(env, 'bts_licenses', code);
+      const o2 = await getDoc(env, 'bts_orders', o.id);
       return o2 && o2.data.code ? out({ code: o2.data.code }) : out({ error: 'busy' }, 409);
     }
     return out({ code });

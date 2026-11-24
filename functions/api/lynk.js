@@ -27,8 +27,8 @@ export async function onRequestPost({ request, env }) {
   const raw = await request.text();
   const hdr = {};
   request.headers.forEach((v, k) => { if (!/^(cookie|authorization|cf-|x-forwarded|x-real)/i.test(k)) hdr[k] = v; });
-  // Simpan salinan mentah supaya bentuk asli payload Lynk.id bisa dilihat di Firestore (koleksi webhook_logs).
-  try { await createDoc(env, 'webhook_logs', null, { at: new Date(), headers: JSON.stringify(hdr), body: raw.slice(0, 30000) }); } catch (e) { console.log('log gagal', e.message); }
+  // Simpan salinan mentah supaya bentuk asli payload Lynk.id bisa dilihat di Firestore (koleksi bts_webhook_logs).
+  try { await createDoc(env, 'bts_webhook_logs', null, { at: new Date(), headers: JSON.stringify(hdr), body: raw.slice(0, 30000) }); } catch (e) { console.log('log gagal', e.message); }
 
   let p; try { p = JSON.parse(raw); } catch { return json({ ok: true, parsed: false }); }
   if (env.PRODUCT_MATCH && !raw.toLowerCase().includes(String(env.PRODUCT_MATCH).toLowerCase())) return json({ ok: true, skipped: 'produk lain' });
@@ -40,12 +40,12 @@ export async function onRequestPost({ request, env }) {
   const id = safeId(trx);
 
   if (/refund/i.test(stat)) {
-    const o = await getDoc(env, 'orders', id);
-    if (o) { await patchDoc(env, 'orders', id, { status: 'refunded' }); if (o.data.code) await delDoc(env, 'licenses', o.data.code); }
+    const o = await getDoc(env, 'bts_orders', id);
+    if (o) { await patchDoc(env, 'bts_orders', id, { status: 'refunded' }); if (o.data.code) await delDoc(env, 'bts_licenses', o.data.code); }
     return json({ ok: true, status: 'refunded' });
   }
   if (/cancel|expired|fail|void|pending|unpaid|waiting/i.test(stat)) return json({ ok: true, status: 'diabaikan' });
 
-  const r = await createDoc(env, 'orders', id, { email, trx, status: 'paid', code: '', createdAt: new Date() });
+  const r = await createDoc(env, 'bts_orders', id, { email, trx, status: 'paid', code: '', createdAt: new Date() });
   return json({ ok: true, order: r });
 }

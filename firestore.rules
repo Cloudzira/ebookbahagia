@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'awanproject54@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+    function signedIn() { return request.auth != null; }
+
+    // ===== Ebook 1: Pulang Tanpa Luka (koleksi lama, tanpa awalan) =====
+    match /content/ptl {
+      allow read: if signedIn()
+        && exists(/databases/$(database)/documents/members/$(request.auth.uid));
+      allow write: if isAdmin();
+    }
+    match /licenses/{kode} {
+      allow get: if signedIn();
+      allow list, create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (signedIn()
+            && request.resource.data.uids.hasAll(resource.data.uids)
+            && request.resource.data.uids.size() <= resource.data.max
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uids']));
+    }
+    match /members/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+    match /stats/ptl {
+      allow read: if true;
+      allow write: if signedIn();
+    }
+
+    // ===== Ebook 2: Bahagia Tanpa Syarat (awalan bts_) =====
+    match /content/bts {
+      allow read: if signedIn()
+        && exists(/databases/$(database)/documents/bts_members/$(request.auth.uid));
+      allow write: if isAdmin();
+    }
+    match /bts_licenses/{kode} {
+      allow get: if signedIn();
+      allow list, create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (signedIn()
+            && request.resource.data.uids.hasAll(resource.data.uids)
+            && request.resource.data.uids.size() <= resource.data.max
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uids']));
+    }
+    match /bts_members/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+    match /stats/bts {
+      allow read: if true;
+      allow write: if signedIn();
+    }
+
+    // bts_orders, bts_webhook_logs, orders, webhook_logs: tanpa aturan = hanya server (service account).
+    // Aplikasi lain di project Firebase yang sama (jika ada) harus ditambahkan sendiri di atas.
+  }
+}

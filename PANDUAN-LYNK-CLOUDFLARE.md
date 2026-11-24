@@ -41,10 +41,10 @@ Setelah mengisi, deploy ulang agar variabel terbaca.
 
 ## Langkah 5. Cek bentuk asli data Lynk.id (penting)
 Format isi webhook Lynk.id tidak saya temukan terdokumentasi publik, jadi parser dibuat longgar (mencari email, ID pesanan, dan status di mana saja dalam data).
-1. Setelah Test URL, buka Firebase > Firestore > koleksi **webhook_logs**. Di situ tersimpan isi mentah dan header yang dikirim Lynk.id.
+1. Setelah Test URL, buka Firebase > Firestore > koleksi **bts_webhook_logs**. Di situ tersimpan isi mentah dan header yang dikirim Lynk.id.
 2. Lihat apakah ada header tanda tangan/signature. Bila ada, kabari saya supaya verifikasinya ditambahkan.
-3. Lakukan satu pembelian percobaan sungguhan. Cek koleksi **orders**: harus muncul satu dokumen dengan `email` dan `trx` yang benar. Lalu uji `klaim.html` memakai email dan ID itu.
-4. Kalau `orders` tidak terisi atau ID/email salah baca, kirim isi `body` di webhook_logs ke saya (hapus email asli), lalu parsernya saya kunci.
+3. Lakukan satu pembelian percobaan sungguhan. Cek koleksi **bts_orders**: harus muncul satu dokumen dengan `email` dan `trx` yang benar. Lalu uji `klaim.html` memakai email dan ID itu.
+4. Kalau `bts_orders` tidak terisi atau ID/email salah baca, kirim isi `body` di webhook_logs ke saya (hapus email asli), lalu parsernya saya kunci.
 5. Uji juga kode hasilnya di ebook (pakai browser incognito).
 
 ## Cara kerja sehari-hari
@@ -54,7 +54,7 @@ Format isi webhook Lynk.id tidak saya temukan terdokumentasi publik, jadi parser
 - Kode manual dari admin tetap bisa dipakai untuk giveaway atau penjualan di tempat lain.
 
 ## Keamanan
-- Koleksi `orders` dan `webhook_logs` tidak punya aturan di Firestore, jadi ditolak untuk semua pengunjung. Hanya server (service account) yang bisa membacanya, dan kamu lewat Firebase Console. `webhook_logs` berisi email pembeli: jangan dibagikan.
+- Koleksi `bts_orders` dan `bts_webhook_logs` tidak punya aturan di Firestore, jadi ditolak untuk semua pengunjung. Hanya server (service account) yang bisa membacanya, dan kamu lewat Firebase Console. `bts_webhook_logs` berisi email pembeli: jangan dibagikan.
 - Tambahkan aturan pembatas laju di Cloudflare: Security > WAF > Rate limiting rules, untuk path `/api/klaim` (mis. 10 permintaan per menit per IP). Ini mencegah orang menebak ID pesanan.
 - Klaim hanya butuh email pembelian. Konsekuensinya, orang yang tahu email seorang pembeli bisa mendapat kode yang sama dengan pembeli itu (batas 3 perangkat tetap berlaku). Karena itu rate limiting di atas penting. Setiap pesanan hanya menghasilkan satu kode.
 - Bila `WEBHOOK_SECRET` bocor, ganti nilainya di Cloudflare dan di URL webhook Lynk.id.

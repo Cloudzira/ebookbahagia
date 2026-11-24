@@ -80,7 +80,7 @@ export async function ordersByEmail(env, email) {
   const eq = (f, v) => ({ fieldFilter: { field: { fieldPath: f }, op: 'EQUAL', value: { stringValue: v } } });
   const r = await fetch(`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents:runQuery`, {
     method: 'POST', headers: { authorization: 'Bearer ' + t, 'content-type': 'application/json' },
-    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'orders' }], where: { compositeFilter: { op: 'AND', filters: [eq('email', email), eq('status', 'paid')] } }, limit: 10 } })
+    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'bts_orders' }], where: { compositeFilter: { op: 'AND', filters: [eq('email', email), eq('status', 'paid')] } }, limit: 10 } })
   });
   if (!r.ok) throw new Error('query ' + r.status + ' ' + (await r.text()).slice(0, 200));
   return (await r.json()).filter((x) => x.document).map((x) => ({ id: x.document.name.split('/').pop(), data: fromF(x.document.fields || {}), updateTime: x.document.updateTime }));

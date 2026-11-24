@@ -1,5 +1,5 @@
 // Saat merevisi buku: ubah VER di sini dan isi version.json, lalu deploy. Pembaca akan melihat banner "Revisi terbaru tersedia".
-const VER='2026-11-24.1',C='bts-'+VER;
+const VER='2026-11-25.1',C='bts-'+VER;
 const F=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(F))));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C&&x.startsWith('bts-')).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));
