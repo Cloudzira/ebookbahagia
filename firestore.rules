@@ -1,61 +1,63 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function admin() { return request.auth != null && request.auth.token.email == 'awanproject54@gmail.com' && request.auth.token.email_verified == true; }
+    function lic(k) { return get(/databases/$(database)/documents/licenses/$(k)).data; }
+    function blic(k) { return get(/databases/$(database)/documents/bts_licenses/$(k)).data; }
 
-    function isAdmin() {
-      return request.auth != null
-        && request.auth.token.email == 'awanproject54@gmail.com'
-        && request.auth.token.email_verified == true;
+    // ===== Dipakai bersama kedua ebook (stats/ptl dan stats/bts) =====
+    match /stats/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['readers','likes']) && request.resource.data.get('readers',0) <= 1 && request.resource.data.get('likes',0) <= 1 && request.resource.data.get('likes',0) >= 0;
+      allow update: if request.resource.data.keys().hasOnly(['readers','likes'])
+        && request.resource.data.get('readers',0) - resource.data.get('readers',0) >= 0
+        && request.resource.data.get('readers',0) - resource.data.get('readers',0) <= 1
+        && request.resource.data.get('likes',0) - resource.data.get('likes',0) >= -1
+        && request.resource.data.get('likes',0) - resource.data.get('likes',0) <= 1;
     }
-    function signedIn() { return request.auth != null; }
 
-    // ===== Ebook 1: Pulang Tanpa Luka (koleksi lama, tanpa awalan) =====
-    match /content/ptl {
-      allow read: if signedIn()
-        && exists(/databases/$(database)/documents/members/$(request.auth.uid));
-      allow write: if isAdmin();
-    }
-    match /licenses/{kode} {
-      allow get: if signedIn();
-      allow list, create, delete: if isAdmin();
-      allow update: if isAdmin()
-        || (signedIn()
-            && request.resource.data.uids.hasAll(resource.data.uids)
-            && request.resource.data.uids.size() <= resource.data.max
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uids']));
+    // ===== Ebook 1: Pulang Tanpa Luka (aturan lama, tidak diubah; content dibatasi ke dokumen ptl) =====
+    match /licenses/{key} {
+      allow get: if request.auth != null;
+      allow list, create, delete: if admin();
+      allow update: if admin() || (request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uids'])
+        && request.resource.data.uids.size() <= resource.data.max
+        && request.resource.data.uids.hasAll(resource.data.uids)
+        && request.resource.data.uids.hasAny([request.auth.uid]));
     }
     match /members/{uid} {
-      allow read, write: if signedIn() && request.auth.uid == uid;
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid && lic(request.resource.data.key).uids.hasAny([uid]);
     }
-    match /stats/ptl {
-      allow read: if true;
-      allow write: if signedIn();
+    match /content/ptl {
+      allow read: if request.auth != null
+        && exists(/databases/$(database)/documents/members/$(request.auth.uid))
+        && lic(get(/databases/$(database)/documents/members/$(request.auth.uid)).data.key).uids.hasAny([request.auth.uid]);
+      allow write: if admin();
     }
 
-    // ===== Ebook 2: Bahagia Tanpa Syarat (awalan bts_) =====
-    match /content/bts {
-      allow read: if signedIn()
-        && exists(/databases/$(database)/documents/bts_members/$(request.auth.uid));
-      allow write: if isAdmin();
-    }
-    match /bts_licenses/{kode} {
-      allow get: if signedIn();
-      allow list, create, delete: if isAdmin();
-      allow update: if isAdmin()
-        || (signedIn()
-            && request.resource.data.uids.hasAll(resource.data.uids)
-            && request.resource.data.uids.size() <= resource.data.max
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uids']));
+    // ===== Ebook 2: Bahagia Tanpa Syarat (koleksi terpisah, awalan bts_) =====
+    match /bts_licenses/{key} {
+      allow get: if request.auth != null;
+      allow list, create, delete: if admin();
+      allow update: if admin() || (request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uids'])
+        && request.resource.data.uids.size() <= resource.data.max
+        && request.resource.data.uids.hasAll(resource.data.uids)
+        && request.resource.data.uids.hasAny([request.auth.uid]));
     }
     match /bts_members/{uid} {
-      allow read, write: if signedIn() && request.auth.uid == uid;
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid && blic(request.resource.data.key).uids.hasAny([uid]);
     }
-    match /stats/bts {
-      allow read: if true;
-      allow write: if signedIn();
+    match /content/bts {
+      allow read: if request.auth != null
+        && exists(/databases/$(database)/documents/bts_members/$(request.auth.uid))
+        && blic(get(/databases/$(database)/documents/bts_members/$(request.auth.uid)).data.key).uids.hasAny([request.auth.uid]);
+      allow write: if admin();
     }
 
-    // bts_orders, bts_webhook_logs, orders, webhook_logs: tanpa aturan = hanya server (service account).
-    // Aplikasi lain di project Firebase yang sama (jika ada) harus ditambahkan sendiri di atas.
+    // orders, webhook_logs, bts_orders, bts_webhook_logs: tanpa aturan = hanya server (service account).
   }
 }
